@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task 1: Invoice Parser</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      border-radius: 12px;
+      background-color: #ffffff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      max-width: 600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      color: #008080;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .form-label {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .file-upload-btn {
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      color: #fff;
+      font-size: 18px;
+      padding: 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: none;
+      transition: 0.3s ease-in-out;
+      width: 100%;
+      text-align: center;
+    }
+
+    .file-upload-btn i {
+      margin-right: 10px;
+    }
+
+    .file-upload-btn:hover {
+      background: linear-gradient(135deg, #2575fc 0%, #6a11cb 100%);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-3px);
+    }
+
+    .progress-area {
+      margin-top: 20px;
+      display: none;
+      width: 100%;
+      height: 5px;
+      background-color: #e6e6e6;
+      border-radius: 50px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background-color: #28a745;
+      border-radius: 50px;
+      transition: width 0.5s ease-in-out;
+    }
+
+    .alert-success {
+      background-color: #28a745;
+      color: #fff;
+      font-weight: 600;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .uploaded-area {
+      margin-top: 20px;
+    }
+
+    .uploaded-area img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+
+    .uploaded-area p {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #666;
+    }
+
+    .d-grid button {
+      font-size: 1.2rem;
+      transition: transform 0.3s ease-in-out;
+    }
+
+    .d-grid button:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Ensuring responsiveness */
+    @media (max-width: 768px) {
+      h2 {
+        font-size: 2rem;
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card shadow-lg">
+    <h2>Task-1: Intelligent Invoice Parser</h2>
+
+    {% if not data %}
+    <!-- Upload Form -->
+    <form method="POST" enctype="multipart/form-data">
+      <input class="file-input" type="file" name="invoice" accept="application/pdf" required id="invoice-input">
+      <button type="button" class="file-upload-btn" id="file-upload-btn">
+        <i class="fas fa-cloud-upload-alt"></i> Browse Invoice
+      </button>
+
+      <div class="progress-area">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+
+      <div class="d-grid mt-3">
+        <button type="submit" class="btn btn-primary" id="parse-invoice-btn" disabled>Parse Invoice</button>
+      </div>
+
+      <div id="message" class="text-center mt-3" style="display:none;">
+        <p>Your file is ready! Click the button to parse the invoice.</p>
+      </div>
+    </form>
+    {% else %}
+    <!-- Output Display -->
+    <div class="alert alert-success text-center">Your Invoice parsed successfully!</div>
+
+    <h5 class="text-muted">Extracted Data:</h5>
+    <pre class="bg-light p-3 border rounded">{{ data | tojson(indent=4) }}</pre>
+
+    <div class="d-flex justify-content-between mt-3">
+        <a href="{{ url_for('download', json_filename=json_filename) }}" class="btn btn-success">
+            Download as JSON
+          </a>
+          
+      <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  const fileInput = document.getElementById("invoice-input");
+  const fileUploadBtn = document.getElementById("file-upload-btn");
+  const progressArea = document.querySelector(".progress-area");
+  const progressBar = document.getElementById("progress-bar");
+  const parseInvoiceBtn = document.getElementById("parse-invoice-btn");
+  const messageDiv = document.getElementById("message");
+
+  // Open file input when upload button is clicked
+  fileUploadBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  // Handle file selection
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      progressArea.style.display = "block";  // Show progress bar
+      parseInvoiceBtn.disabled = true;  // Disable "Parse Invoice" button while uploading
+      uploadFile(file);
+    }
+  });
+
+  // Simulate file upload and show progress
+  function uploadFile(file) {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "#", true); // Dummy URL for testing; replace with actual endpoint
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) {
+        const percent = (e.loaded / e.total) * 100;
+        progressBar.style.width = percent + "%";
+      }
+    });
+
+    // When file is uploaded successfully
+    xhr.onload = () => {
+      setTimeout(() => {
+        progressBar.style.width = "100%";  // Ensure progress bar fills to 100%
+        setTimeout(() => {
+          progressArea.style.display = "none";  // Hide progress bar
+          messageDiv.style.display = "block";  // Show message
+          parseInvoiceBtn.disabled = false;  // Enable "Parse Invoice" button
+        }, 500);
+      }, 1000);
+    };
+
+    xhr.send(file);  // Send file to the server (simulate with dummy URL)
+  }
+</script>
+
+</body>
+</html>
