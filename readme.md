@@ -35,7 +35,7 @@ It allows users to upload invoice PDFs through a web interface, automatically ex
 
 ---
 
-## 📦 Installation
+##  Installation
 
 1. Clone the repository:
    git clone <url>
